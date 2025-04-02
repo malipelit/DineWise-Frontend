@@ -1,6 +1,6 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 function CustomerHomePage() {
     const [restaurants, setRestaurants] = useState([]);
@@ -8,7 +8,20 @@ function CustomerHomePage() {
 
     useEffect(() => {
         axios.get('/restaurants')
-            .then(response => setRestaurants(response.data.restaurants))
+            .then(response => {
+                const rests = response.data.restaurants;
+                Promise.all(rests.map(async r => {
+                    try {
+                        const res = await axios.get(`/api/opening_hours/${r.id}`);
+                        const hours = res.data.opening_hours;
+                        const today = new Date().getDay();
+                        const todayEntry = hours.find(item => item.day_of_week === today);
+                        return { ...r, todayHours: todayEntry };
+                    } catch (err) {
+                        return { ...r, todayHours: null };
+                    }
+                })).then(updated => setRestaurants(updated));
+            })
             .catch(error => console.error("Error fetching restaurants:", error));
     }, []);
 
@@ -17,6 +30,14 @@ function CustomerHomePage() {
         r.location.toLowerCase().includes(search.toLowerCase()) ||
         r.cuisine.toLowerCase().includes(search.toLowerCase())
     );
+
+    const formatTime = (timeStr) => {
+        if(!timeStr) return "N/A";
+        const [hour, minute] = timeStr.split(":");
+        const date = new Date();
+        date.setHours(hour, minute);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
     return (
         <div className="container my-4">
@@ -34,10 +55,21 @@ function CustomerHomePage() {
             </div>
             <div className="list-group">
                 {filteredRestaurants.map(r => (
-                    <Link key={r.id} to={`/restaurant/${r.id}`} className="list-group-item list-group-item-action">
+                    <Link 
+                        key={r.id}
+                        to={`/restaurant/${r.id}`} 
+                        className="list-group-item list-group-item-action"
+                    >
                         <h5>{r.name}</h5>
                         <p className="mb-1">{r.location}</p>
                         <small>{r.cuisine}</small>
+                        {r.todayHours && (
+                          <div className="mt-1">
+                            <small>
+                              Today: {formatTime(r.todayHours.open_time)} - {formatTime(r.todayHours.close_time)}
+                            </small>
+                          </div>
+                        )}
                     </Link>
                 ))}
             </div>

@@ -6,11 +6,22 @@ import ReservationTab from "./ReservationTab";
 import QueueTab from "./QueueTab";
 import PositionTab from "./PositionTab";
 
+const days = [
+  { day: 0, label: "Sunday" },
+  { day: 1, label: "Monday" },
+  { day: 2, label: "Tuesday" },
+  { day: 3, label: "Wednesday" },
+  { day: 4, label: "Thursday" },
+  { day: 5, label: "Friday" },
+  { day: 6, label: "Saturday" }
+];
+
 function RestaurantDetailPage() {
     const { id } = useParams();
     const [restaurant, setRestaurant] = useState(null);
     const [activeTab, setActiveTab] = useState('reservation');
     const navigate = useNavigate();
+    const [openingHours, setOpeningHours] = useState([]);
 
     const handleBack = (e) => {
         navigate('/');
@@ -34,6 +45,18 @@ function RestaurantDetailPage() {
             .catch(error => console.error("Error fetching restaurant details:", error));
     }, [id]);
 
+    useEffect(() => {
+        if (restaurant) {
+            axios.get(`/api/opening_hours/${restaurant.id}`)
+                .then(response => {
+                    setOpeningHours(response.data.opening_hours);
+                })
+                .catch(err => {
+                    console.error("Error fetching opening hours:", err);
+                });
+        }
+    }, [restaurant]);
+
     if (!restaurant) {
         return <div className="container my-4"><p>Loading restaurant...</p></div>;
     }
@@ -51,6 +74,24 @@ function RestaurantDetailPage() {
                 <p><strong>Location:</strong> {restaurant.location}</p>
                 <p><strong>Cuisine:</strong> {restaurant.cuisine}</p>
             </div>
+            <section className="mt-4">
+                <h2>Opening Hours</h2>
+                {openingHours.length ? (
+                    <ul className="list-group">
+                        {days.map(d => {
+                            const entry = openingHours.find(item => Number(item.day_of_week) === d.day);
+                            return (
+                                <li key={d.day} className="list-group-item">
+                                    <strong>{d.label}:</strong>{" "}
+                                    {entry ? `${entry.open_time} - ${entry.close_time}` : "Closed"}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                ) : (
+                    <p>Loading opening hours...</p>
+                )}
+            </section>
             <ul className="nav nav-tabs mb-3">
                 <li className="nav-item">
                     <button className={`nav-link ${activeTab==='reservation'?'active':''}`}

@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from "react";
-import {useNavigate} from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import ReservationsCalendar from "./ReservationCalendar";
@@ -15,18 +15,26 @@ function ReservationTab() {
         return sunday;
     });
     const [restaurant, setRestaurant] = useState(null);
+    const [openingHours, setOpeningHours] = useState([]); 
     const navigate = useNavigate();
 
     useEffect(() => {
-        const stored = localStorage.getItem('restaurant');
+        const stored = localStorage.getItem('restaurantId');
         if (!stored) {
             navigate('/restaurant-login');
         } else {
-            const r = JSON.parse(stored);
-            setRestaurant(r);
-            fetchReservations(r.id);
+            setRestaurant(stored);
+            fetchReservations(stored);
         }
     }, [navigate]);
+
+    useEffect(() => {
+        if (restaurant) {
+            axios.get(`/api/opening_hours/${restaurant}`)
+                .then(response => setOpeningHours(response.data.opening_hours))
+                .catch(error => console.error("Error fetching opening hours:", error));
+        }
+    }, [restaurant]);
 
     const fetchReservations = (restaurantId) => {
         axios
@@ -83,6 +91,7 @@ function ReservationTab() {
             <ReservationsCalendar
                 reservations={reservations}
                 weekStart={currentWeekStart}
+                openingHours={openingHours}
                 onDeleteReservation={handleDeleteReservation}
             />
         </div>

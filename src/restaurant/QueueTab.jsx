@@ -8,13 +8,19 @@ function QueueTab() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const stored = localStorage.getItem('restaurant');
+        const stored = localStorage.getItem('restaurantId');
         if (!stored) {
             navigate('/restaurant-login');
         } else {
-            const r = JSON.parse(stored);
-            setRestaurant(r);
-            fetchQueue(r.id);
+            axios.get(`/api/restaurants/${stored}`)
+                .then((response) => {
+                    setRestaurant(response.data.restaurant);
+                })
+                .catch((error) => {
+                    console.error('Error fetching restaurant:', error);
+                    alert('Failed to fetch restaurant data.');
+                });
+            fetchQueue(stored);
         }
     }, [navigate]);
 
